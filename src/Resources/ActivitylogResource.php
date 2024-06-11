@@ -73,6 +73,8 @@ class ActivitylogResource extends Resource
             number_format(static::getModel()::count()) : null;
     }
 
+    protected static ?string $activeNavigationIcon = 'heroicon-s-presentation-chart-line';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -89,7 +91,7 @@ class ActivitylogResource extends Resource
                         TextInput::make('subject_type')
                             ->afterStateHydrated(function ($component, ?Model $record, $state) {
                                 /** @var Activity&ActivityModel $record */
-                                return $state ? $component->state(Str::of($state)->afterLast('\\')->headline() . ' # ' . $record->subject_id) : '-';
+                                return $state ? $component->state(static::translateModel(Str::of($state)->afterLast('\\')->headline()) . ' # ' . $record->subject_id) : '-';
                             })
                             ->label(__('activitylog::forms.fields.subject_type.label')),
 
@@ -106,10 +108,10 @@ class ActivitylogResource extends Resource
                             })
                             ->label(__('activitylog::forms.fields.log_name.label')),
 
-                        Placeholder::make('event')
+                            Placeholder::make('event')
                             ->content(function (?Model $record): string {
                                 /** @phpstan-ignore-next-line */
-                                return $record?->event ? ucwords($record?->event) : '-';
+                                return $record?->event ? static::translateEvent($record?->event) : '-';
                             })
                             ->label(__('activitylog::forms.fields.event.label')),
 
@@ -134,18 +136,25 @@ class ActivitylogResource extends Resource
                         if ($properties->count()) {
                             $schema[] = KeyValue::make('properties')
                                 ->label(__('activitylog::forms.fields.properties.label'))
+                                ->afterStateHydrated(function (KeyValue $component, ?Model $record) {
+                                    $component->state(static::translateProperties($record->properties->except(['attributes', 'old'])));
+                                })
                                 ->columnSpan('full');
                         }
 
                         if ($old = $record->properties->get('old')) {
                             $schema[] = KeyValue::make('old')
-                                ->afterStateHydrated(fn (KeyValue $component) => $component->state($old))
+                                ->afterStateHydrated(function (KeyValue $component) use ($old) {
+                                    $component->state(static::translateProperties($old));
+                                })
                                 ->label(__('activitylog::forms.fields.old.label'));
                         }
 
                         if ($attributes = $record->properties->get('attributes')) {
                             $schema[] = KeyValue::make('attributes')
-                                ->afterStateHydrated(fn (KeyValue $component) => $component->state($attributes))
+                                ->afterStateHydrated(function (KeyValue $component) use ($attributes) {
+                                    $component->state(static::translateProperties($attributes));
+                                })
                                 ->label(__('activitylog::forms.fields.attributes.label'));
                         }
 
@@ -162,7 +171,6 @@ class ActivitylogResource extends Resource
                 static::getEventColumnCompoment(),
                 static::getSubjectTypeColumnCompoment(),
                 static::getCauserNameColumnCompoment(),
-                static::getPropertiesColumnCompoment(),
                 static::getCreatedAtColumnCompoment(),
             ])
             ->filters([
@@ -192,6 +200,7 @@ class ActivitylogResource extends Resource
                 'created' => 'success',
                 'deleted' => 'danger',
             })
+            ->formatStateUsing(fn ($state) => static::translateEvent($state))
             ->sortable();
     }
 
@@ -205,7 +214,7 @@ class ActivitylogResource extends Resource
                     return '-';
                 }
 
-                return Str::of($state)->afterLast('\\')->headline() . ' # ' . $record->subject_id;
+                return static::translateModel(Str::of($state)->afterLast('\\')->headline()) . ' # ' . $record->subject_id;
             })
             ->hidden(fn (Livewire $livewire) => $livewire instanceof ActivitylogRelationManager);
     }
@@ -301,5 +310,75 @@ class ActivitylogResource extends Resource
         } else {
             return ActivitylogPlugin::get()->isAuthorized();
         }
+    }
+
+    private static function translateEvent(string $event): string
+    {
+        return match ($event) {
+            'draft' => 'مسودة',
+            'created' => 'إنشاء',
+            'updated' => 'تعديل',
+            'deleted' => 'حذف',
+            default => $event,
+        };
+    }
+
+    private static function translateModel(string $model): string
+    {
+        return match ($model) {
+            'Brand' => 'ماركة',
+            'Car' => 'مركبة',
+            'Color' => 'لون',
+            'Contact' => 'رسالة',
+            'Faq' => 'سؤال',
+            'Feature' => 'ميزة',
+            'Image' => 'صورة',
+            'Policy' => 'سياسة',
+            'Specification' => 'صفة',
+            'Type' => 'نوع',
+            'User' => 'مستخدم',
+            default => $model,
+        };
+    }
+
+    private static function translateProperties(array $properties): array
+    {
+        $translatedProperties = [];
+        foreach ($properties as $key => $value) {
+            $translatedProperties[static::translatePropertyKey($key)] = $value;
+        }
+        return $translatedProperties;
+    }
+
+    private static function translatePropertyKey(string $key): string
+    {
+        return match ($key) {
+            'name' => 'الاسم',
+            'slug' => 'عنوان الرابط',
+            'country' => 'الدولة',
+            'img' => 'الصورة',
+            'description' => 'الوصف',
+            'model' => 'الطراز',
+            'brand_id' => 'الماركة',
+            'type_id' => 'النوع',
+            'year' => 'السنة',
+            'trim' => 'الفئة',
+            'value' => 'القيمة',
+            'phone_number' => 'رقم الهاتف',
+            'email' => 'البريد الإلكتروني',
+            'subject' => 'الموضوع',
+            'message' => 'الرسالة',
+            'is_replyed' => 'تم الرد',
+            'replyed_at' => 'تاريخ الرد',
+            'question' => 'السؤال',
+            'answer' => 'الإجابة',
+            'car_id' => 'المركبة',
+            'color_id' => 'اللون',
+            'path' => 'المسار',
+            'title' => 'العنوان',
+            'content' => 'المحتوى',
+            'version' => 'الإصدار',
+            default => $key,
+        };
     }
 }
