@@ -2,13 +2,13 @@
 
 return [
     'resources' => [
-        'label'                  => 'Activity Log',
-        'plural_label'           => 'Activity Logs',
-        'navigation_group'       => null,
-        'navigation_icon'        => 'heroicon-o-shield-check',
+        'label'                  => 'سجل الحدث',
+        'plural_label'           => 'سجلات الأحداث',
+        'navigation_group'       => 'النظام',
+        'navigation_icon'        => 'heroicon-o-presentation-chart-line',
         'navigation_sort'        => null,
         'navigation_count_badge' => false,
         'resource'               => \Rmsramos\Activitylog\Resources\ActivitylogResource::class,
     ],
-    'datetime_format' => 'd/m/Y H:i:s',
+    'datetime_format' => 'd M Y - h:i A',
 ];
