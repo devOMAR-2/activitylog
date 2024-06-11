@@ -290,7 +290,7 @@ class ActivitylogResource extends Resource
     {
         return SelectFilter::make('event')
             ->label(__('activitylog::tables.filters.event.label'))
-            ->options(static::getModel()::distinct()->pluck('event', 'event'));
+            ->options(self::getTranslatedEvents());
     }
 
     public static function getPages(): array
@@ -310,6 +310,15 @@ class ActivitylogResource extends Resource
         } else {
             return ActivitylogPlugin::get()->isAuthorized();
         }
+    }
+
+    private static function getTranslatedEvents(): array
+    {
+        $events = static::getModel()::distinct()->pluck('event', 'event')->toArray();
+
+        return array_map(function ($event) {
+            return static::translateEvent($event);
+        }, $events);
     }
 
     private static function translateEvent(string $event): string
